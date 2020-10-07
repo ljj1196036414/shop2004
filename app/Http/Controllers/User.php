@@ -16,6 +16,25 @@ class User extends Controller
        $res=DB::table('user')->get();
        return view('user/index',['res'=>$res]);
     }
+    //登录页面
+    public function login(){
+        return view('user/login');
+    }
+    public function logins(Request $request){
+        $data=$request->except('_token');
+        //dd($data);
+        $res=DB::table('user')->where('user_name',$data['user_name'])->first();
+       if(!$res){
+           return redirect('user/login')->with('msg','用户名或者密码不正确');
+       }
+        if($res->password!=$data['password']){
+            return redirect('user/login')->with('msg','用户名或者密码不正确');
+        }
+        request()->session()->put('userlogin',$res);
+        $data['last_login']=time();
+        DB::table('user')->where('uid',$res->uid)->update($data);
+        return redirect('user/index');
+    }
 
     /**
      * Show the form for creating a new resource.
@@ -79,7 +98,12 @@ class User extends Controller
     {
         $data=$request->except('_token');
         $res=DB::table('user')->where('uid',$id)->update($data);
-        return view('user/index');
+        $res=DB::table('user')->get();
+        //dd($res);
+        if($res){
+            return view('user/index',['res'=>$res]);
+        }
+
     }
 
     /**
