@@ -8,7 +8,8 @@
     <title>Document</title>
 </head>
 <body>
-<form action="{{url('user/uodate/'.$res->uid)}}" method="post">
+<form action="{{url('user/update/'.$res->uid)}}" method="post">
+    @csrf
     <table border="1">
         <tr>
             <td>用户名</td>
