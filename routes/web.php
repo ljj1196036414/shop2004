@@ -22,6 +22,8 @@ Route::any('student/edit/{s_id}','Student@edit');
 Route::post('student/update/{s_id}','Student@update');
 
 
+Route::get('user/login','User@login');
+Route::post('user/logins','User@logins');
 
 Route::get('user/create','User@create');
 Route::post('user/store','User@store');
