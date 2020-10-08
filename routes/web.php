@@ -31,3 +31,11 @@ Route::get('user/index','User@index');
 Route::any('user/destroy/{uid}','User@destroy');
 Route::any('user/edit/{uid}','User@edit');
 Route::post('user/update/{uid}','User@update');
+
+
+Route::get('puser/create','Puser@create');
+Route::post('puser/store','Puser@store');
+Route::get('puser/index','Puser@index');
+Route::any('puser/destroy/{user_id}','Puser@destroy');
+Route::any('puser/edit/{user_id}','Puser@edit');
+Route::post('puser/update/{user_id}','Puser@update');
