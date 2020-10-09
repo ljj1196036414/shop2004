@@ -15,7 +15,7 @@
             <td>id</td>
             <td>用户名</td>
             <td>邮箱</td>
-            <td>密码</td>
+
             <td>注册时间</td>
             <td>最后登录时间</td>
             <td>最后登录ip</td>
@@ -28,7 +28,6 @@
                 <td>{{$v->uid}}</td>
                 <td>{{$v->user_name}}</td>
                 <td>{{$v->email}}</td>
-                <td>{{$v->password}}</td>
                 <td>{{$v->reg_time}}</td>
                 <td>{{$v->last_login}}</td>
                 <td>{{$v->last_ip}}</td>
