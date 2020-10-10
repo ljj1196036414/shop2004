@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\model\Admin\UserModel;
 use Illuminate\Support\Facades\Redis;
 use Validator;
+use Illuminate\Support\Facades\Cookie;
 class UserController extends Controller
 {
     /**
@@ -24,20 +25,70 @@ class UserController extends Controller
     }
     public function logins(Request $request){
         $data=$request->except('_token');
-        $data['last_login']=time();
-        $reg='/^1[3|4|5|6|7|8|9]\d{9}$/';
-        $reg_email='/^\w{3,}@([a-z]{2,7}|[0-9]{3}\.(com|cn))$/';
+        //使用Laravel封装的方法来获取用户的真实ip地址
+        $ip=$request->getClientIp();
+        $UserModel=new UserModel();
+        //存一个redis  keys
         $res=UserModel::where('user_name',$data['user_name'])
             ->orwhere('email',$data['user_name'])
             ->orwhere('phone',$data['user_name'])
             ->first();
-       /*if(!$res){
-           return redirect('user/login')->with('msg','用户名不存在');
-       }
-        if(password_verify($res->password ,$data['password'])){
+        //dd($res);
+        if(empty($res)){
+            return redirect('user/login')
+                ->with(['msg'=>'用户不存在']);
+        }
+        $key='login:login_count:'.$data['user_name'];
+        //ceil 取整
+        //  TTL设置时间
+        // login_time名 自定义
+        $login_time=ceil(Redis::TTL("login_time:".$res['uid'])/60);
+        //get 获取
+        //如果用户的一小时锁定时间 去 / (除以) 60去取整
+        //反馈给用户还剩余多少时间可重新操作登录
+        if(!empty(Redis::get('login_time:'.$res['uid']))){
+            return redirect('user/login')
+                ->with(['msg'=>'该账户密码输入错误次数过多,已锁定一小时,剩余时间'.$login_time.'分钟']);
+        }
 
-            return redirect('user/login')->with('msg','密码错误');die;
-        }*/
+        //dd($ddd);
+        // 判断用户是否已经锁定
+        if(Redis::get("login_count:".$res['uid'])>=4){
+            Redis::setex("login_time:".$res['uid'],3600,Redis::get("login_count:".$res['uid']));
+            return redirect('user/login')
+                ->with(['msg'=>'该账户密码输入错误次数过多,已锁定一小时']);
+        }
+        if(password_verify($data['password'],$res['password'])){
+            // 如果用户登录成功 并且 账号的status(状态)不在锁定状态，也就是说用户的错误次数没有超过一定的限制
+            // 下边这个操作是讲该用户的登录的错误次数设置为null(空)
+            /**
+             * Redis::setex
+             * 使用Redis来定义一个
+             * 第一个参数为键
+             * 第二个参数为过期时间(单位为:秒)
+             * 第三个参数设置为键所对应的值(这里不是规范)
+             */
+            Redis::setex("login_count:".$res['uid'],1,Redis::get("login_count:".$res['uid']));
+            $logininfo=['last_login'=>time(),'last_ip'=>$ip,'login_count'=>$res['login_count']+1];
+            $UserModel->where('uid',$res['uid'])->update($logininfo);
+            return redirect('goods/index');
+        }else{
+                // 判断用户是不是第一次错误 如果是第一次错误则释放出一个属于第一次的时间领域
+                /**
+                 * Redis::setex
+                 * 使用Redis来定义一个
+                 * 第一个参数为键
+                 * 第二个参数为过期时间(单位为:秒)
+                 * 第三个参数设置为键所对应的值
+                 */
+                if(empty(Redis::get("login_count:".$res['uid']))){//设置一个10分钟的时间领域
+                    Redis::setex("login_count:".$res['uid'],600,Redis::get("login_count:".$res['uid']));
+                }
+                // 来设置用户的错误次数
+                Redis::incr("login_count:".$res['uid']);
+                return redirect('user/login')->with(['msg'=>'您输入的账号或密码有误,错误次数:'.Redis::get("login_count:".$res['uid'])]);
+
+            }
         request()->session()->put('userlogin',$res);
         return redirect('goods/index');
     }
@@ -50,12 +101,6 @@ class UserController extends Controller
     public function create()
     {
         return view('user/create');
-    }
-    public function showProfile()
-    {
-        Redis::set('name','lijunjing');
-        $res=Redis::get('name');
-        dd($res);
     }
     /**
      * Store a newly created resource in storage.
